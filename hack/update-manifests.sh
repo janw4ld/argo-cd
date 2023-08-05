@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-SRCROOT="$( CDPATH='' cd -- "$(dirname "$0")/.." && pwd -P )"
+SRCROOT="$(git rev-parse --show-toplevel)"
 AUTOGENMSG="# This is an auto-generated file. DO NOT EDIT"
 
 KUSTOMIZE=kustomize
@@ -13,20 +13,8 @@ KUSTOMIZE=kustomize
 cd ${SRCROOT}/manifests/ha/base/redis-ha && ./generate.sh
 
 IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-quay.io/argoproj}"
-IMAGE_TAG="${IMAGE_TAG:-}"
-
-# if the tag has not been declared, and we are on a release branch, use the VERSION file.
-if [ "$IMAGE_TAG" = "" ]; then
-  branch=$(git rev-parse --abbrev-ref HEAD)
-  if [[ $branch = release-* ]]; then
-    pwd
-    IMAGE_TAG=v$(cat $SRCROOT/VERSION)
-  fi
-fi
-# otherwise, use latest
-if [ "$IMAGE_TAG" = "" ]; then
-  IMAGE_TAG=latest
-fi
+RELEASE_VERSION=v$(cat $SRCROOT/VERSION)
+IMAGE_TAG="${IMAGE_TAG:-$RELEASE_VERSION}"
 
 $KUSTOMIZE version
 which $KUSTOMIZE
