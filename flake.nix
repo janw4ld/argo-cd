@@ -15,7 +15,14 @@
         content =
           pkgs.writeShellScriptBin
             name
-            (builtins.readFile ./hack/update-manifests.sh);
+            (builtins.readFile ./hack/update-manifests.sh + ''
+              git add \
+                manifests/install.yaml           \
+                manifests/core-install.yaml      \
+                manifests/namespace-install.yaml \
+                manifests/ha/install.yaml        \
+                manifests/ha/namespace-install.yaml
+            '');
       };
       ignoreScript = rec {
         name = "pick-ignored";
@@ -29,7 +36,7 @@
               | grep -xqf - ignoretree && echo "$file"
           }; export -f it
 
-          echo "$IN" | uniq | it
+          echo "$IN" | uniq | parallel --pipe -N1 it
         '';
       };
       mergeScript = rec {
@@ -48,14 +55,18 @@
           sed -nE 's/^DU\s+(.*)/\1/p' <<<$STATUS \
             | pick-ignored | xargs git rm
 
-          git rm  \
+          git rm \
             manifests/install.yaml           \
             manifests/core-install.yaml      \
             manifests/namespace-install.yaml \
             manifests/ha/install.yaml        \
             manifests/ha/namespace-install.yaml
 
-          git checkout --theirs VERSION
+          git checkout --theirs \
+            VERSION             \
+            manifests/base/kustomization.yaml         \
+            manifests/core-install/kustomization.yaml \
+            manifests/ha/base/kustomization.yaml
 
           find . -type d -empty -delete
 
@@ -84,6 +95,9 @@
       packages.updateManifests = createJobFromScript updateScript;
       packages.mergeUpstream = createJobFromScript mergeScript;
       packages.diffUpstream = createJobFromScript diffScript;
+      devShells.default = pkgs.mkShell {
+        buildInputs = with packages; [ updateManifests mergeUpstream diffUpstream ];
+      };
     }
   );
 }
