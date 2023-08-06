@@ -16,12 +16,13 @@
           pkgs.writeShellScriptBin
             name
             (builtins.readFile ./hack/update-manifests.sh + ''
-              git add \
-                manifests/install.yaml           \
-                manifests/core-install.yaml      \
-                manifests/namespace-install.yaml \
-                manifests/ha/install.yaml        \
-                manifests/ha/namespace-install.yaml
+              (cd "$(git rev-parse --show-toplevel)" &&
+                git add \
+                  manifests/install.yaml           \
+                  manifests/core-install.yaml      \
+                  manifests/namespace-install.yaml \
+                  manifests/ha/install.yaml        \
+                  manifests/ha/namespace-install.yaml)
             '');
       };
       ignoreScript = rec {
